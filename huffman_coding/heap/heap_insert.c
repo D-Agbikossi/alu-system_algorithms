@@ -1,70 +1,57 @@
-#include <stdlib.h>
 #include "heap.h"
 
-static void swap_data(binary_tree_node_t *a, binary_tree_node_t *b)
+/**
+ * heapify - restores heap property from leaf node of subtree
+ * @node: node_t leaf node of heap tree
+ * @data_cmp: comparison function over generic data pointers
+ * Return: node_t pointer to sifted up node
+ */
+static node_t *heapify(node_t *node, int (*data_cmp)(void *, void *))
 {
-	void *tmp = a->data;
+	if (!node || !data_cmp)
+		return (NULL);
 
-	a->data = b->data;
-	b->data = tmp;
-}
-
-static void sift_up(binary_tree_node_t *node, heap_t *heap)
-{
-	while (node->parent &&
-	       heap->data_cmp(node->data, node->parent->data) < 0)
+	while (node->parent && data_cmp(node->data, node->parent->data) < 0)
 	{
-		swap_data(node, node->parent);
+		DATASWAP(node, node->parent);
 		node = node->parent;
 	}
-}
 
-static binary_tree_node_t *get_parent(heap_t *heap)
-{
-	size_t path, mask;
-	binary_tree_node_t *node = heap->root;
-
-	path = heap->size + 1;
-	mask = 1UL << (sizeof(size_t) * 8 - 2);
-
-	while (!(mask & path))
-		mask >>= 1;
-	mask >>= 1;
-
-	while (mask > 1)
-	{
-		node = (path & mask) ? node->right : node->left;
-		mask >>= 1;
-	}
 	return (node);
 }
 
-binary_tree_node_t *heap_insert(heap_t *heap, void *data)
+/**
+ * heap_insert - inserts a value in a binary heap
+ *                  (uses static reference array)
+ * @heap: pointer to heap_t where we'll insert node
+ * @data: generic pointer to data for new node
+ * Return: node_t pointer to the newly inserted node
+ */
+node_t *heap_insert(heap_t *heap, void *data)
 {
-	binary_tree_node_t *node, *parent;
+	static node_t *harray[32];
+	node_t *new, *parent;
 
 	if (!heap || !data)
 		return (NULL);
 
-	if (!heap->root)
+	if (heap->size == 0)
 	{
-		heap->root = binary_tree_node(NULL, data);
-		heap->size = 1;
+		harray[heap->size++] = binary_tree_node(NULL, data);
+		heap->root = harray[0];
 		return (heap->root);
 	}
 
-	parent = get_parent(heap);
-	node = binary_tree_node(parent, data);
-	if (!node)
-		return (NULL);
+	/* find parent of new node */
+	parent = harray[(heap->size - 1) / 2];
 
-	if (!parent->left)
-		parent->left = node;
-	else
-		parent->right = node;
+	/* insert left or right */
+	harray[heap->size++] = (!parent->left)
+		? (parent->left = binary_tree_node(parent, data))
+		: (parent->right = binary_tree_node(parent, data));
 
-	heap->size++;
-	sift_up(node, heap);
+	/* restore heap property */
+	new = heapify(harray[heap->size - 1], heap->data_cmp);
 
-	return (node);
+	return (new);
 }

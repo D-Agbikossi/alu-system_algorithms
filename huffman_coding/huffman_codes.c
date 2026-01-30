@@ -1,36 +1,55 @@
-#include <stdio.h>
 #include "huffman.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-static void print_codes(binary_tree_node_t *node, char *code, int depth)
+/**
+ * print_leaf_data - description
+ * @buffer: char buffer for writing huffman code for leaf
+ * @node: node_t root of huffman subtree
+ */
+void print_leaf_data(char *buffer, node_t *node)
 {
-	symbol_t *s;
+	if (!node) return;
 
-	if (!node)
-		return;
-
-	s = node->data;
+	if (node->left)
+	{
+		char buf[256] = {0};
+		char *fmt = (buffer) ? "%s0" : "0";
+		sprintf((char *)&buf, fmt, buffer);
+		print_leaf_data((char *)&buf, node->left);
+	}
+	if (node->right)
+	{
+		char buf[256] = {0};
+		char *fmt = (buffer) ? "%s1" : "1";
+		sprintf((char *)&buf, fmt, buffer);
+		print_leaf_data((char *)&buf, node->right);
+	}
 	if (!node->left && !node->right)
 	{
-		code[depth] = '\0';
-		printf("%c: %s\n", s->data, code);
-		return;
+		char c = ((symbol_t *)node->data)->data;
+		printf("%c: %s\n", c, buffer);
 	}
-
-	code[depth] = '0';
-	print_codes(node->left, code, depth + 1);
-	code[depth] = '1';
-	print_codes(node->right, code, depth + 1);
 }
 
+/**
+ * huffman_codes - for (a/6),(b/11),(c/12),(d/13),(e/16),(f/36), prints:
+ * * f: 0
+ * * c: 100
+ * * d: 101
+ * * e: 110
+ * * a: 1110
+ * * b: 1111
+ * @data: data
+ * @freq: freq
+ * @size: size
+ * Return: int 1 on success, 0 on failure
+ */
 int huffman_codes(char *data, size_t *freq, size_t size)
 {
-	binary_tree_node_t *root;
-	char code[128];
-
-	root = huffman_tree(data, freq, size);
-	if (!root)
-		return (0);
-
-	print_codes(root, code, 0);
+	node_t *root = huffman_tree(data, freq, size);
+	if (!root) return (0);
+	print_leaf_data(NULL, root);
+	free_binary_tree_node(root, free);
 	return (1);
 }
