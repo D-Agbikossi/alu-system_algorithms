@@ -1,33 +1,22 @@
-#include <stdlib.h>
 #include "heap.h"
 
-static binary_tree_node_t *get_last(heap_t *heap)
-{
-	size_t path, mask;
-	binary_tree_node_t *node = heap->root;
-
-	path = heap->size;
-	mask = 1UL << (sizeof(size_t) * 8 - 2);
-
-	while (!(mask & path))
-		mask >>= 1;
-	mask >>= 1;
-
-	while (mask)
-	{
-		node = (path & mask) ? node->right : node->left;
-		mask >>= 1;
-	}
-	return (node);
-}
-
+/**
+ * sift_down - restores heap property from a given node
+ * @node: pointer to the node to sift down
+ * @heap: pointer to the heap
+ */
 static void sift_down(binary_tree_node_t *node, heap_t *heap)
 {
 	binary_tree_node_t *smallest;
+	void *tmp;
+
+	if (!node || !heap)
+		return;
 
 	while (node->left)
 	{
 		smallest = node->left;
+
 		if (node->right &&
 		    heap->data_cmp(node->right->data, smallest->data) < 0)
 			smallest = node->right;
@@ -35,7 +24,7 @@ static void sift_down(binary_tree_node_t *node, heap_t *heap)
 		if (heap->data_cmp(node->data, smallest->data) <= 0)
 			break;
 
-		void *tmp = node->data;
+		tmp = node->data;
 		node->data = smallest->data;
 		smallest->data = tmp;
 
@@ -43,25 +32,33 @@ static void sift_down(binary_tree_node_t *node, heap_t *heap)
 	}
 }
 
+/**
+ * heap_extract - extracts the root value of a heap
+ * @heap: pointer to the heap
+ *
+ * Return: pointer to extracted data, or NULL on failure
+ */
 void *heap_extract(heap_t *heap)
 {
 	void *data;
 	binary_tree_node_t *last;
 
-	if (!heap || heap->size == 0)
+	if (!heap || !heap->root)
 		return (NULL);
 
 	data = heap->root->data;
 
-	if (heap->size == 1)
+	last = binary_tree_last_node(heap->root);
+	if (!last)
+		return (NULL);
+
+	if (last == heap->root)
 	{
-		free(heap->root);
+		binary_tree_delete(heap->root);
 		heap->root = NULL;
-		heap->size = 0;
 		return (data);
 	}
 
-	last = get_last(heap);
 	heap->root->data = last->data;
 
 	if (last->parent->left == last)
@@ -69,8 +66,8 @@ void *heap_extract(heap_t *heap)
 	else
 		last->parent->right = NULL;
 
-	free(last);
-	heap->size--;
+	binary_tree_delete(last);
+
 	sift_down(heap->root, heap);
 
 	return (data);
